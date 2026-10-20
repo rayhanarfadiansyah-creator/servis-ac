@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -60,16 +61,28 @@ export default function LoginPage() {
 
       const next = searchParams.get("next");
 
+      // Hanya izinkan redirect ke halaman internal website.
+      const tujuanValid =
+        next && next.startsWith("/") && !next.startsWith("//")
+          ? next
+          : null;
+
       if (admin) {
-        if (next === "/admin/produk") {
-          router.replace("/admin/produk");
+        // Admin tetap masuk dashboard atau halaman admin yang dituju.
+        if (tujuanValid?.startsWith("/admin")) {
+          router.replace(tujuanValid);
         } else {
           router.replace("/admin");
         }
-      } else if (next === "/booking") {
-        router.replace("/booking");
       } else {
-        router.replace("/profile");
+        // User biasa masuk beranda, kecuali ada tujuan khusus
+        // seperti /booking.
+        const tujuanUser =
+          tujuanValid && !tujuanValid.startsWith("/admin")
+            ? tujuanValid
+            : "/";
+
+        router.replace(tujuanUser);
       }
 
       router.refresh();
@@ -114,6 +127,7 @@ export default function LoginPage() {
             >
               Email
             </label>
+
             <input
               id="email"
               type="email"
@@ -133,6 +147,7 @@ export default function LoginPage() {
             >
               Password
             </label>
+
             <input
               id="password"
               type="password"

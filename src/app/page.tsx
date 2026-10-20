@@ -1,5 +1,7 @@
+
 import Link from "next/link";
 import ProdukCatalog from "./ProdukCatalog";
+import AuthNav from "./AuthNav";
 
 const services = [
   {
@@ -65,16 +67,20 @@ function WhatsAppLink({
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-white text-slate-800">
+    <main className="min-h-screen overflow-x-clip bg-white pb-20 text-slate-800 md:pb-0">
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4">
-          <a href="#beranda" className="flex shrink-0 items-center gap-2">
-            <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-700 text-2xl text-white">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5 md:flex-nowrap md:gap-5 md:py-4">
+          <a
+            href="#beranda"
+            className="flex min-w-0 shrink-0 items-center gap-2"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-700 text-2xl text-white sm:h-11 sm:w-11">
               ❄
             </span>
-            <span>
-              <span className="block text-lg font-bold text-slate-900">
+
+            <span className="min-w-0">
+              <span className="block text-base font-bold text-slate-900 sm:text-lg">
                 Service AC
               </span>
               <span className="block text-xs text-slate-500">
@@ -83,97 +89,70 @@ export default function Home() {
             </span>
           </a>
 
-          <nav className="hidden items-center gap-7 text-sm font-medium md:flex">
-            <a href="#beranda" className="hover:text-blue-700">
+          <div className="shrink-0">
+            <AuthNav />
+          </div>
+
+          <nav className="order-3 flex w-full items-center gap-5 overflow-x-auto border-t border-slate-100 pt-3 text-sm font-medium md:order-none md:w-auto md:gap-6 md:overflow-visible md:border-0 md:pt-0">
+            <a href="#beranda" className="shrink-0 py-1 hover:text-blue-700">
               Beranda
             </a>
-            <a href="#layanan" className="hover:text-blue-700">
+            <a href="#layanan" className="shrink-0 py-1 hover:text-blue-700">
               Layanan
             </a>
-            <a href="#harga" className="hover:text-blue-700">
-              Daftar Harga
+            <a href="#harga" className="shrink-0 py-1 hover:text-blue-700">
+              Harga
             </a>
-            <a href="#produk" className="hover:text-blue-700">
+            <a href="#produk" className="shrink-0 py-1 hover:text-blue-700">
               Produk AC
             </a>
-            <a href="#kontak" className="hover:text-blue-700">
+            <a href="#kontak" className="shrink-0 py-1 hover:text-blue-700">
               Kontak
             </a>
           </nav>
-
-          {/* Tombol akun dan booking */}
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Link
-              href="/login"
-              className="rounded-lg border border-blue-700 px-3 py-3 text-sm font-bold text-blue-700 hover:bg-blue-50"
-            >
-              Login
-            </Link>
-
-            <Link
-              href="/register"
-              className="rounded-lg bg-blue-100 px-3 py-3 text-sm font-bold text-blue-800 hover:bg-blue-200"
-            >
-              Daftar
-            </Link>
-
-            <Link
-              href="/profile"
-              className="rounded-lg border border-slate-300 px-3 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
-            >
-              Profile
-            </Link>
-
-            <Link
-              href="/login?next=/booking"
-              className="rounded-lg bg-blue-700 px-4 py-3 text-sm font-bold text-white hover:bg-blue-800"
-            >
-              Booking Servis
-            </Link>
-          </div>
         </div>
       </header>
 
       {/* Hero */}
-      <section id="beranda" className="bg-slate-50">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 md:grid-cols-2 md:py-20">
-          <div>
-            <span className="mb-4 inline-block rounded-md bg-blue-100 px-3 py-2 text-sm font-semibold text-blue-800">
+      <section id="beranda" className="scroll-mt-32 bg-slate-50">
+        <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-10 sm:px-5 sm:py-14 md:grid-cols-2 md:gap-10 md:py-20">
+          <div className="min-w-0">
+            <span className="mb-4 inline-block rounded-md bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-800 sm:text-sm">
               Layanan Servis Panggilan
             </span>
 
-            <h1 className="max-w-xl text-4xl font-extrabold leading-tight tracking-tight text-slate-950 md:text-5xl">
+            <h1 className="max-w-xl text-3xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-4xl md:text-5xl">
               Butuh Servis AC di Rumah?
             </h1>
 
-            <p className="mt-5 max-w-lg text-lg leading-8 text-slate-600">
+            <p className="mt-4 max-w-lg text-base leading-7 text-slate-600 sm:mt-5 sm:text-lg sm:leading-8">
               Layanan cuci dan perbaikan AC serta berbagai elektronik rumah
               tangga. Pilih layanan dan tentukan jadwal dengan mudah.
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row">
               <Link
-                href="/login?next=/booking"
-                className="rounded-lg bg-blue-700 px-6 py-4 text-center font-bold text-white hover:bg-blue-800"
+                href="/booking"
+                className="flex min-h-12 items-center justify-center rounded-lg bg-blue-700 px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-800 sm:px-6 sm:py-4 sm:text-base"
               >
                 Booking Servis Sekarang →
               </Link>
 
-              <WhatsAppLink className="rounded-lg border-2 border-green-600 bg-white px-6 py-4 text-center font-bold text-green-700 hover:bg-green-50">
+              <WhatsAppLink className="flex min-h-12 items-center justify-center rounded-lg border-2 border-green-600 bg-white px-5 py-3 text-center text-sm font-bold text-green-700 transition hover:bg-green-50 sm:px-6 sm:py-4 sm:text-base">
                 Hubungi WhatsApp
               </WhatsAppLink>
             </div>
 
-            <p className="mt-5 text-sm text-slate-500">
+            <p className="mt-4 text-xs leading-5 text-slate-500 sm:mt-5 sm:text-sm">
               Mudah dipesan · Jadwal jelas · Layanan panggilan
             </p>
           </div>
 
-          <div className="overflow-hidden rounded-2xl bg-blue-100">
+          <div className="min-w-0 overflow-hidden rounded-2xl bg-blue-100">
             <img
-              src="https://images.unsplash.com/photo-1631545806609-7c7b1b2b4b1b?auto=format&fit=crop&w=1000&q=85"
-              alt="Unit pendingin ruangan untuk layanan servis AC"
-              className="h-72 w-full object-cover md:h-[420px]"
+              src="/service-ac-hero.jpg"
+              alt="Teknisi profesional sedang membersihkan AC"
+              className="h-56 w-full rounded-2xl object-cover sm:h-80 md:h-[420px]"
             />
           </div>
         </div>
@@ -182,36 +161,38 @@ export default function Home() {
       {/* Services */}
       <section
         id="layanan"
-        className="mx-auto max-w-6xl px-5 py-16 md:py-20"
+        className="mx-auto max-w-6xl scroll-mt-24 px-4 py-12 sm:px-5 sm:py-16 md:py-20"
       >
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-slate-950">Layanan Kami</h2>
-          <p className="mt-3 text-lg text-slate-600">
+        <div className="mb-7 sm:mb-8">
+          <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl">
+            Layanan Kami
+          </h2>
+          <p className="mt-2 text-base leading-7 text-slate-600 sm:mt-3 sm:text-lg">
             Pilih layanan sesuai kebutuhan rumah Anda.
           </p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
           {services.map((service) => (
             <article
               key={service.name}
-              className="rounded-xl border border-slate-200 bg-white p-6"
+              className="min-w-0 rounded-xl border border-slate-200 bg-white p-5 sm:p-6"
             >
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-blue-50 text-3xl">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-3xl sm:h-14 sm:w-14">
                 {service.icon}
               </div>
 
-              <h3 className="text-xl font-bold text-slate-900">
+              <h3 className="text-lg font-bold text-slate-900 sm:text-xl">
                 {service.name}
               </h3>
 
-              <p className="mt-3 min-h-14 leading-6 text-slate-600">
+              <p className="mt-3 leading-6 text-slate-600">
                 {service.description}
               </p>
 
               <Link
-                href="/login?next=/booking"
-                className="mt-5 inline-block font-bold text-blue-700 hover:underline"
+                href="/booking"
+                className="mt-5 inline-flex min-h-10 items-center font-bold text-blue-700 hover:underline"
               >
                 Pilih Layanan →
               </Link>
@@ -221,26 +202,26 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section className="bg-slate-50 py-16 md:py-20">
-        <div className="mx-auto max-w-6xl px-5">
-          <div className="mb-10 text-center">
-            <h2 className="text-3xl font-bold text-slate-950">
+      <section className="bg-slate-50 py-12 sm:py-16 md:py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-5">
+          <div className="mb-8 text-left sm:mb-10 sm:text-center">
+            <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl">
               Cara Booking Servis
             </h2>
-            <p className="mt-3 text-lg text-slate-600">
+            <p className="mt-2 text-base text-slate-600 sm:mt-3 sm:text-lg">
               Cukup tiga langkah sederhana.
             </p>
           </div>
 
-          <div className="grid gap-8 md:grid-cols-3">
+          <div className="grid gap-6 sm:gap-8 md:grid-cols-3">
             {steps.map((step) => (
-              <div key={step.number} className="flex gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-700 text-xl font-bold text-white">
+              <div key={step.number} className="flex items-start gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-700 text-lg font-bold text-white sm:h-12 sm:w-12 sm:text-xl">
                   {step.number}
                 </div>
 
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">
+                <div className="min-w-0">
+                  <h3 className="text-lg font-bold text-slate-900 sm:text-xl">
                     {step.title}
                   </h3>
                   <p className="mt-2 leading-7 text-slate-600">
@@ -251,10 +232,10 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="mt-10 text-center">
+          <div className="mt-8 sm:mt-10 sm:text-center">
             <Link
-              href="/login?next=/booking"
-              className="inline-block rounded-lg bg-blue-700 px-7 py-4 font-bold text-white hover:bg-blue-800"
+              href="/booking"
+              className="flex min-h-12 w-full items-center justify-center rounded-lg bg-blue-700 px-7 py-3 font-bold text-white transition hover:bg-blue-800 sm:mx-auto sm:inline-flex sm:w-auto sm:py-4"
             >
               Mulai Booking
             </Link>
@@ -265,27 +246,29 @@ export default function Home() {
       {/* Price */}
       <section
         id="harga"
-        className="mx-auto max-w-6xl px-5 py-16 md:py-20"
+        className="mx-auto max-w-6xl scroll-mt-24 px-4 py-12 sm:px-5 sm:py-16 md:py-20"
       >
-        <h2 className="text-3xl font-bold text-slate-950">
+        <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl">
           Informasi Harga
         </h2>
 
-        <p className="mt-3 text-lg leading-7 text-slate-600">
+        <p className="mt-3 text-base leading-7 text-slate-600 sm:text-lg">
           Hubungi kami untuk mengetahui harga layanan sesuai jenis dan kondisi
           unit Anda.
         </p>
 
-        <div className="mt-7 rounded-xl border border-slate-200 p-6">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <div>
-              <h3 className="text-xl font-bold">Cuci dan Servis AC</h3>
-              <p className="mt-2 text-slate-600">
+        <div className="mt-6 rounded-xl border border-slate-200 p-5 sm:mt-7 sm:p-6">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="min-w-0">
+              <h3 className="text-lg font-bold sm:text-xl">
+                Cuci dan Servis AC
+              </h3>
+              <p className="mt-2 leading-6 text-slate-600">
                 Harga dikonfirmasi sebelum pengerjaan.
               </p>
             </div>
 
-            <WhatsAppLink className="inline-block rounded-lg bg-green-600 px-5 py-3 text-center font-bold text-white hover:bg-green-700">
+            <WhatsAppLink className="flex min-h-12 w-full shrink-0 items-center justify-center rounded-lg bg-green-600 px-5 py-3 text-center font-bold text-white transition hover:bg-green-700 sm:w-auto">
               Tanya Harga
             </WhatsAppLink>
           </div>
@@ -293,38 +276,40 @@ export default function Home() {
       </section>
 
       {/* Products */}
-      
-{/* Products */}
-<section id="produk" className="bg-slate-50 py-16 md:py-20">
-  <div className="mx-auto max-w-6xl px-5">
-    <div className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-center">
-      <div>
-        <h2 className="text-3xl font-bold text-slate-950">
-          Pilihan Produk AC
-        </h2>
-        <p className="mt-3 max-w-xl leading-7 text-slate-600">
-          Lihat pilihan AC yang tersedia. Hubungi kami untuk informasi
-          lebih lanjut dan pemesanan.
-        </p>
-      </div>
+      <section
+        id="produk"
+        className="scroll-mt-24 bg-slate-50 py-12 sm:py-16 md:py-20"
+      >
+        <div className="mx-auto max-w-6xl px-4 sm:px-5">
+          <div className="flex flex-col items-stretch justify-between gap-4 md:flex-row md:items-center md:gap-5">
+            <div className="min-w-0">
+              <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl">
+                Pilihan Produk AC
+              </h2>
+              <p className="mt-3 max-w-xl leading-7 text-slate-600">
+                Lihat pilihan AC yang tersedia. Hubungi kami untuk informasi
+                lebih lanjut dan pemesanan.
+              </p>
+            </div>
 
-      <WhatsAppLink className="rounded-lg bg-green-600 px-6 py-4 text-center font-bold text-white hover:bg-green-700">
-        Tanya Produk AC
-      </WhatsAppLink>
-    </div>
+            <WhatsAppLink className="flex min-h-12 w-full shrink-0 items-center justify-center rounded-lg bg-green-600 px-6 py-3 text-center font-bold text-white transition hover:bg-green-700 md:w-auto">
+              Tanya Produk AC
+            </WhatsAppLink>
+          </div>
 
-    <ProdukCatalog />
-  </div>
-</section>
-
+          <div className="mt-6 min-w-0 sm:mt-8">
+            <ProdukCatalog />
+          </div>
+        </div>
+      </section>
 
       {/* Contact */}
       <section
         id="kontak"
-        className="mx-auto max-w-6xl px-5 py-16 md:py-20"
+        className="mx-auto max-w-6xl scroll-mt-24 px-4 py-12 sm:px-5 sm:py-16 md:py-20"
       >
-        <div className="rounded-2xl bg-blue-800 px-6 py-10 text-white md:px-12 md:py-14">
-          <h2 className="text-3xl font-bold">
+        <div className="rounded-2xl bg-blue-800 px-5 py-8 text-white sm:px-8 sm:py-10 md:px-12 md:py-14">
+          <h2 className="text-2xl font-bold sm:text-3xl">
             Butuh Bantuan dengan AC Anda?
           </h2>
 
@@ -333,15 +318,15 @@ export default function Home() {
             servis sesuai jadwal yang tersedia.
           </p>
 
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row">
             <Link
-              href="/login?next=/booking"
-              className="rounded-lg bg-white px-6 py-4 text-center font-bold text-blue-800 hover:bg-blue-50"
+              href="/booking"
+              className="flex min-h-12 items-center justify-center rounded-lg bg-white px-6 py-3 text-center font-bold text-blue-800 transition hover:bg-blue-50 sm:py-4"
             >
               Booking Servis
             </Link>
 
-            <WhatsAppLink className="rounded-lg border border-white px-6 py-4 text-center font-bold text-white hover:bg-blue-700">
+            <WhatsAppLink className="flex min-h-12 items-center justify-center rounded-lg border border-white px-6 py-3 text-center font-bold text-white transition hover:bg-blue-700 sm:py-4">
               Chat WhatsApp
             </WhatsAppLink>
           </div>
@@ -350,17 +335,17 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-8 text-sm text-slate-600 md:flex-row md:items-center md:justify-between">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-7 text-sm text-slate-600 sm:px-5 sm:py-8 md:flex-row md:items-center md:justify-between md:gap-3">
           <p className="font-bold text-slate-900">Service AC</p>
           <p>Servis AC dan berbagai elektronik rumah tangga.</p>
           <p>© {new Date().getFullYear()} Service AC</p>
         </div>
       </footer>
 
-      {/* WhatsApp */}
-      <WhatsAppLink className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-full bg-green-600 px-5 py-4 font-bold text-white shadow-lg hover:bg-green-700">
+      {/* Floating WhatsApp */}
+      <WhatsAppLink className="fixed bottom-4 right-3 z-50 flex min-h-12 items-center justify-center gap-2 rounded-full bg-green-600 px-4 py-3 font-bold text-white shadow-lg transition hover:bg-green-700 sm:bottom-5 sm:right-5 sm:px-5 sm:py-4">
         <span className="text-xl">☏</span>
-        <span>WhatsApp</span>
+        <span className="text-sm sm:text-base">WhatsApp</span>
       </WhatsAppLink>
     </main>
   );

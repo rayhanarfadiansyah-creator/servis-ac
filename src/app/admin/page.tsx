@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
@@ -8,6 +10,8 @@ import { createClient } from "@/lib/supabase";
 type Booking = {
   id: string;
   user_id: string;
+  nama: string;
+  telepon: string;
   layanan: string;
   tanggal: string;
   jumlah_unit: number | null;
@@ -32,6 +36,7 @@ const STATUSES = [
 ];
 
 const WEEKDAYS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
+const ACTIVE_STATUSES = ["Menunggu", "Dikonfirmasi", "Diproses"];
 
 function localDateString(date: Date) {
   const year = date.getFullYear();
@@ -58,8 +63,8 @@ function getMonday(date: Date) {
   return monday;
 }
 
-function getLastSevenDays() {
-  const today = new Date();
+function getLastSevenDays(date: Date) {
+  const today = new Date(date);
   today.setHours(0, 0, 0, 0);
 
   const start = new Date(today);
@@ -85,9 +90,167 @@ export default function AdminPage() {
   const [notice, setNotice] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
 
+  const [kuotaHarian, setKuotaHarian] = useState("");
+  const [loadingKuota, setLoadingKuota] = useState(true);
+  const [savingKuota, setSavingKuota] = useState(false);
+  const [errorKuota, setErrorKuota] = useState("");
+  const [noticeKuota, setNoticeKuota] = useState("");
+
+  // Waktu baru dibaca setelah komponen terpasang di browser.
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setNow(new Date());
+  }, []);
+
   const loadBookings = useCallback(async () => {
     setLoading(true);
     setError("");
+
+    try {
+      const supabase = createClient();
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) {
+        setError(`Gagal memeriksa login: ${authError.message}`);
+        return;
+      }
+
+      if (!user) {
+        router.replace("/login?next=/admin");
+        return;
+      }
+
+      const { data: admin, error: adminError } = await supabase
+        .from("admin_users")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (adminError) {
+        setError(
+          `Gagal memeriksa akses admin: ${adminError.message}`
+        );
+        return;
+      }
+
+      if (!admin) {
+        router.replace("/");
+        return;
+      }
+
+      const { data, error: bookingsError } = await supabase
+  .from("bookings")
+  .select(
+    "id, user_id, nama, telepon, layanan, tanggal, jumlah_unit, alamat, keluhan, status, created_at"
+  )
+  .order("tanggal", { ascending: true });
+
+      if (bookingsError) {
+        setError(`Gagal mengambil booking: ${bookingsError.message}`);
+        return;
+      }
+
+      setBookings((data ?? []) as Booking[]);
+    } catch (err) {
+      console.error("loadBookings error:", err);
+      setError(
+        err instanceof Error
+          ? `Gagal memuat booking: ${err.message}`
+          : "Terjadi kesalahan saat memuat dashboard."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
+  const loadKuota = useCallback(async () => {
+    setLoadingKuota(true);
+    setErrorKuota("");
+
+    try {
+      const supabase = createClient();
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) {
+        setErrorKuota(`Gagal memeriksa login: ${authError.message}`);
+        return;
+      }
+
+      if (!user) {
+        router.replace("/login?next=/admin");
+        return;
+      }
+
+      const { data: admin, error: adminError } = await supabase
+        .from("admin_users")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (adminError) {
+        setErrorKuota(
+          `Gagal memeriksa akses admin: ${adminError.message}`
+        );
+        return;
+      }
+
+      if (!admin) {
+        router.replace("/");
+        return;
+      }
+
+      const { data, error: queryError } = await supabase
+        .from("pengaturan_booking")
+        .select("kuota_harian")
+        .eq("id", 1)
+        .maybeSingle();
+
+      if (queryError) {
+        setErrorKuota(`Gagal memuat kuota: ${queryError.message}`);
+        return;
+      }
+
+      if (!data) {
+        setErrorKuota(
+          "Pengaturan kuota tidak ditemukan. Periksa tabel pengaturan_booking di Supabase."
+        );
+        return;
+      }
+
+      setKuotaHarian(
+        data.kuota_harian == null ? "" : String(data.kuota_harian)
+      );
+    } catch (err) {
+      console.error("loadKuota error:", err);
+      setErrorKuota(
+        err instanceof Error
+          ? `Gagal memuat kuota: ${err.message}`
+          : "Terjadi kesalahan saat memuat pengaturan kuota."
+      );
+    } finally {
+      setLoadingKuota(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    void loadBookings();
+    void loadKuota();
+  }, [loadBookings, loadKuota]);
+
+  async function simpanKuota(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSavingKuota(true);
+    setErrorKuota("");
+    setNoticeKuota("");
 
     try {
       const supabase = createClient();
@@ -109,9 +272,7 @@ export default function AdminPage() {
         .maybeSingle();
 
       if (adminError) {
-        setError(
-          "Gagal memeriksa akses admin. Pastikan tabel admin_users dan policy RLS sudah benar."
-        );
+        setErrorKuota(`Gagal memeriksa admin: ${adminError.message}`);
         return;
       }
 
@@ -120,31 +281,63 @@ export default function AdminPage() {
         return;
       }
 
-      let query = supabase
-        .from("bookings")
-        .select(
-          "id, user_id, layanan, tanggal, jumlah_unit, alamat, keluhan, status, created_at"
-        )
-        .order("tanggal", { ascending: true });
+      const input = kuotaHarian.trim();
+      const nilaiKuota = input === "" ? null : Number(input);
 
-      const { data, error: bookingsError } = await query;
-
-      if (bookingsError) {
-        setError(`Gagal mengambil booking: ${bookingsError.message}`);
+      if (
+        nilaiKuota !== null &&
+        (!Number.isSafeInteger(nilaiKuota) || nilaiKuota < 1)
+      ) {
+        setErrorKuota(
+          "Kuota harus bilangan bulat minimal 1, atau kosongkan untuk tanpa batas."
+        );
         return;
       }
 
-      setBookings((data ?? []) as Booking[]);
-    } catch {
-      setError("Terjadi kesalahan saat memuat dashboard.");
-    } finally {
-      setLoading(false);
-    }
-  }, [router, selectedDate]);
+      const { data, error: updateError } = await supabase
+        .from("pengaturan_booking")
+        .update({
+          kuota_harian: nilaiKuota,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", 1)
+        .select("kuota_harian")
+        .maybeSingle();
 
-  useEffect(() => {
-    void loadBookings();
-  }, [loadBookings]);
+      if (updateError) {
+        setErrorKuota(`Kuota gagal disimpan: ${updateError.message}`);
+        return;
+      }
+
+      if (!data) {
+        setErrorKuota(
+          "Kuota tidak berubah. Periksa policy UPDATE untuk admin di Supabase."
+        );
+        return;
+      }
+
+      setKuotaHarian(
+        data.kuota_harian == null ? "" : String(data.kuota_harian)
+      );
+
+      setNoticeKuota(
+        data.kuota_harian == null
+          ? "Berhasil! Kuota harian tanpa batas."
+          : `Berhasil! Maksimal ${data.kuota_harian} booking per hari.`
+      );
+
+      await Promise.all([loadBookings(), loadKuota()]);
+    } catch (err) {
+      console.error("simpanKuota error:", err);
+      setErrorKuota(
+        err instanceof Error
+          ? `Gagal menyimpan kuota: ${err.message}`
+          : "Terjadi kesalahan saat menyimpan kuota."
+      );
+    } finally {
+      setSavingKuota(false);
+    }
+  }
 
   async function updateStatus(id: string, status: string) {
     setSavingId(id);
@@ -166,8 +359,13 @@ export default function AdminPage() {
 
       setNotice("Status booking berhasil diperbarui.");
       await loadBookings();
-    } catch {
-      setError("Terjadi kesalahan saat memperbarui status.");
+    } catch (err) {
+      console.error("updateStatus error:", err);
+      setError(
+        err instanceof Error
+          ? `Gagal memperbarui status: ${err.message}`
+          : "Terjadi kesalahan saat memperbarui status."
+      );
     } finally {
       setSavingId(null);
     }
@@ -180,19 +378,40 @@ export default function AdminPage() {
     router.refresh();
   }
 
-  const today = localDateString(new Date());
-  const monday = getMonday(new Date());
-  const sunday = new Date(monday);
-  sunday.setDate(sunday.getDate() + 6);
+  // Semua perhitungan tanggal menunggu sampai waktu browser tersedia.
+  const today = now ? localDateString(now) : "";
+  const monday = now ? getMonday(now) : null;
+  const sunday = monday ? new Date(monday) : null;
 
-  const weekStart = localDateString(monday);
-  const weekEnd = localDateString(sunday);
-  const lastSevenDays = getLastSevenDays();
+  if (sunday) {
+    sunday.setDate(sunday.getDate() + 6);
+  }
 
-  // Statistik grafik mengikuti minggu kalender Senin–Minggu.
+  const weekStart = monday ? localDateString(monday) : "";
+  const weekEnd = sunday ? localDateString(sunday) : "";
+
+  const lastSevenDays = now
+    ? getLastSevenDays(now)
+    : { start: "", end: "" };
+
+  const bookingAktifHariIni = now
+    ? bookings.filter(
+        (b) =>
+          b.created_at &&
+          localDateString(new Date(b.created_at)) === today &&
+          ACTIVE_STATUSES.includes(b.status)
+      ).length
+    : 0;
+
+  const sisaKuotaHariIni =
+    kuotaHarian.trim() === ""
+      ? null
+      : Math.max(0, Number(kuotaHarian) - bookingAktifHariIni);
+
   const completedThisWeek = bookings.filter(
     (b) =>
       b.status === "Selesai" &&
+      !!weekStart &&
       isInRange(b.tanggal, weekStart, weekEnd)
   );
 
@@ -201,85 +420,109 @@ export default function AdminPage() {
     0
   );
 
-  const waitingBookings = bookings.filter(
-    (b) => ["Menunggu", "Dikonfirmasi", "Diproses"].includes(b.status)
+  const waitingBookings = bookings.filter((b) =>
+    ACTIVE_STATUSES.includes(b.status)
   );
 
-  const dailyStats: DailyStat[] = WEEKDAYS.map((label, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
-    const dateString = localDateString(date);
+  const dailyStats: DailyStat[] = monday
+    ? WEEKDAYS.map((label, index) => {
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + index);
+        const dateString = localDateString(date);
 
-    const units = completedThisWeek
-      .filter((b) => b.tanggal === dateString)
-      .reduce((total, b) => total + Math.max(0, b.jumlah_unit ?? 0), 0);
+        const units = completedThisWeek
+          .filter((b) => b.tanggal === dateString)
+          .reduce(
+            (total, b) => total + Math.max(0, b.jumlah_unit ?? 0),
+            0
+          );
 
-    return { label, date: dateString, units };
-  });
+        return { label, date: dateString, units };
+      })
+    : [];
 
   const maxUnits = Math.max(1, ...dailyStats.map((day) => day.units));
 
-  // Riwayat tujuh hari terakhir. Data lama tidak dihapus.
   const recentHistory = bookings
     .filter(
       (b) =>
         b.status === "Selesai" &&
+        !!lastSevenDays.start &&
         isInRange(b.tanggal, lastSevenDays.start, lastSevenDays.end)
     )
     .sort((a, b) => b.tanggal.localeCompare(a.tanggal));
 
-  // Jadwal mendatang yang belum selesai atau dibatalkan.
- 
-const upcomingBookings = bookings
-  .filter(
-    (b) =>
-      b.tanggal >= today &&
-      (!selectedDate || b.tanggal === selectedDate) &&
-      !["Selesai", "Dibatalkan"].includes(b.status)
-  )
-  .sort((a, b) => a.tanggal.localeCompare(b.tanggal))
-  .slice(0, 8);
-
+  const upcomingBookings = bookings
+    .filter(
+      (b) =>
+        !!today &&
+        b.tanggal >= today &&
+        (!selectedDate || b.tanggal === selectedDate) &&
+        !["Selesai", "Dibatalkan"].includes(b.status)
+    )
+    .sort((a, b) => a.tanggal.localeCompare(b.tanggal))
+    .slice(0, 8);
 
   const historyUnits = recentHistory.reduce(
     (total, b) => total + Math.max(0, b.jumlah_unit ?? 0),
     0
   );
 
-  const totalBookingsThisWeek = bookings.filter((b) =>
-    isInRange(b.tanggal, weekStart, weekEnd)
+  const totalBookingsThisWeek = bookings.filter(
+    (b) =>
+      !!weekStart && isInRange(b.tanggal, weekStart, weekEnd)
   ).length;
 
-  const rupiahDateRange = `${formatDate(lastSevenDays.start)} – ${formatDate(
-    lastSevenDays.end
-  )}`;
+  const dateRange = lastSevenDays.start
+    ? `${formatDate(lastSevenDays.start)} – ${formatDate(lastSevenDays.end)}`
+    : "Menghitung tanggal...";
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-900">
+    <main className="min-h-screen overflow-x-hidden bg-slate-100 text-slate-900">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-700 text-2xl text-white">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5 lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-2xl text-white">
               ❄
             </div>
-            <div>
-              <h1 className="text-xl font-extrabold">Dashboard Admin</h1>
+            <div className="min-w-0">
+              <h1 className="text-lg font-extrabold sm:text-xl">
+                Dashboard Admin
+              </h1>
               <p className="text-sm text-slate-500">
                 Manajemen layanan AC
               </p>
             </div>
           </div>
 
-          <nav className="flex flex-wrap items-center gap-3 text-sm">
+          <nav className="grid grid-cols-2 gap-2 text-sm sm:flex sm:flex-wrap">
             <Link
               href="/admin/produk"
-              className="rounded-lg border border-slate-300 px-4 py-2 font-semibold hover:bg-slate-50"
+              className="flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-2 py-3 text-center font-semibold hover:bg-slate-50 sm:px-3"
             >
               Kelola Produk
             </Link>
+            <Link
+              href="/admin/libur"
+              className="flex min-h-11 items-center justify-center rounded-lg border border-amber-300 bg-amber-50 px-2 py-3 text-center font-semibold text-amber-900 hover:bg-amber-100 sm:px-3"
+            >
+              Kelola Tanggal Libur
+            </Link>
+            <a
+              href="#pengaturan-kuota"
+              className="flex min-h-11 items-center justify-center rounded-lg border border-blue-300 bg-blue-50 px-2 py-3 text-center font-semibold text-blue-900 hover:bg-blue-100 sm:px-3"
+            >
+              Pengaturan Kuota
+            </a>
+            <a
+              href="#kelola-booking"
+              className="flex min-h-11 items-center justify-center rounded-lg bg-blue-700 px-2 py-3 text-center font-semibold text-white hover:bg-blue-800 sm:px-3"
+            >
+              Jadwal Booking
+            </a>
             <button
               onClick={handleLogout}
-              className="rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white hover:bg-slate-700"
+              className="col-span-2 flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-3 py-3 font-semibold text-white hover:bg-slate-700 sm:col-span-1"
             >
               Keluar
             </button>
@@ -287,10 +530,10 @@ const upcomingBookings = bookings
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="mx-auto max-w-7xl space-y-4 px-3 py-4 sm:space-y-6 sm:px-6 sm:py-6 lg:px-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-2xl font-extrabold">
+            <h2 className="text-xl font-extrabold sm:text-2xl">
               Ringkasan operasional
             </h2>
             <p className="mt-1 text-sm text-slate-500">
@@ -298,40 +541,169 @@ const upcomingBookings = bookings
             </p>
           </div>
           <button
-            onClick={() => void loadBookings()}
-            disabled={loading}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50"
+            onClick={() => {
+              void loadBookings();
+              void loadKuota();
+            }}
+            disabled={loading || loadingKuota}
+            className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
           >
-            {loading ? "Memuat..." : "↻ Refresh data"}
+            {loading || loadingKuota ? "Memuat..." : "↻ Refresh data"}
           </button>
         </div>
 
         {error && (
           <div
             role="alert"
-            className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+            className="break-words rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
           >
             {error}
           </div>
         )}
 
         {notice && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+          <div
+            role="status"
+            className="break-words rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
+          >
             {notice}
           </div>
         )}
 
-        {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-500">
-            Memuat dashboard...
+        <section
+          id="pengaturan-kuota"
+          className="scroll-mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-base font-bold sm:text-lg">
+                Pengaturan Kuota Booking Harian
+              </h3>
+              <p className="mt-1 text-sm leading-5 text-slate-500">
+                Atur jumlah pesanan booking yang diterima per tanggal, bukan
+                jumlah unit AC.
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-800">
+              Admin
+            </span>
+          </div>
+
+          {errorKuota && (
+            <div
+              role="alert"
+              className="mt-4 break-words rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+            >
+              {errorKuota}
+            </div>
+          )}
+
+          {noticeKuota && (
+            <div
+              role="status"
+              className="mt-4 break-words rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+            >
+              {noticeKuota}
+            </div>
+          )}
+
+          <form
+            onSubmit={simpanKuota}
+            className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end"
+          >
+            <div className="min-w-0 flex-1">
+              <label
+                htmlFor="kuotaHarian"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Maksimal booking per hari
+              </label>
+              <input
+                id="kuotaHarian"
+                type="number"
+                min="1"
+                step="1"
+                inputMode="numeric"
+                value={kuotaHarian}
+                onChange={(e) => setKuotaHarian(e.target.value)}
+                disabled={loadingKuota || savingKuota}
+                placeholder="Contoh: 5"
+                className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-50"
+              />
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Masukkan bilangan bulat minimal 1. Kosongkan untuk tanpa batas.
+                Status Menunggu, Dikonfirmasi, dan Diproses dihitung sebagai
+                booking aktif.
+              </p>
+            </div>
+            <button
+              type="submit"
+              disabled={loadingKuota || savingKuota}
+              className="min-h-12 w-full rounded-xl bg-blue-700 px-6 py-3 font-bold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            >
+              {loadingKuota
+                ? "Memuat kuota..."
+                : savingKuota
+                  ? "Menyimpan..."
+                  : "Simpan Kuota"}
+            </button>
+          </form>
+        </section>
+
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+          <IndicatorCard
+            title="Booking aktif hari ini"
+            value={!now || loading ? "..." : String(bookingAktifHariIni)}
+            subtitle={today ? formatDate(today) : "Menghitung tanggal..."}
+            color="blue"
+          />
+          <IndicatorCard
+            title="Kuota harian"
+            value={
+              loadingKuota
+                ? "..."
+                : kuotaHarian.trim() === ""
+                  ? "∞"
+                  : kuotaHarian
+            }
+            subtitle={
+              kuotaHarian.trim() === ""
+                ? "Tanpa batas booking"
+                : "Maksimal pesanan per hari"
+            }
+            color="slate"
+          />
+          <IndicatorCard
+            title="Sisa slot hari ini"
+            value={
+              !now || loading || loadingKuota
+                ? "..."
+                : sisaKuotaHariIni === null
+                  ? "∞"
+                  : String(sisaKuotaHariIni)
+            }
+            subtitle={
+              kuotaHarian.trim() === ""
+                ? "Booking tidak dibatasi"
+                : sisaKuotaHariIni === 0
+                  ? "Kuota sudah penuh"
+                  : "Slot booking tersedia"
+            }
+            color="green"
+          />
+        </section>
+
+        {loading || !now ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500 sm:p-10">
+            {loading ? "Memuat dashboard..." : "Menyiapkan statistik..."}
           </div>
         ) : (
           <>
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
               <StatCard
                 title="Unit selesai minggu ini"
                 value={`${completedUnitsThisWeek} unit`}
-                subtitle={`${weekStart} sampai ${weekEnd}`}
+                subtitle={`${formatDate(weekStart)} – ${formatDate(weekEnd)}`}
                 icon="❄"
                 color="blue"
               />
@@ -352,38 +724,38 @@ const upcomingBookings = bookings
               <StatCard
                 title="Unit selesai 7 hari"
                 value={`${historyUnits} unit`}
-                subtitle={rupiahDateRange}
+                subtitle={dateRange}
                 icon="↗"
                 color="violet"
               />
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-bold">
+            <section className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-6">
+              <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 xl:col-span-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-bold sm:text-lg">
                       Grafik unit selesai diservis
                     </h3>
                     <p className="mt-1 text-sm text-slate-500">
                       Berdasarkan tanggal service, Senin–Minggu.
                     </p>
                   </div>
-                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+                  <span className="shrink-0 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
                     {completedUnitsThisWeek} unit
                   </span>
                 </div>
 
-                <div className="mt-7 grid h-56 grid-cols-7 gap-2 sm:gap-4">
+                <div className="mt-6 grid grid-cols-7 gap-1.5 sm:mt-7 sm:gap-4">
                   {dailyStats.map((day) => (
                     <div
                       key={day.date}
                       className="flex min-w-0 flex-col items-center justify-end gap-2"
                     >
-                      <span className="text-xs font-bold text-slate-700">
+                      <span className="text-[11px] font-bold text-slate-700 sm:text-xs">
                         {day.units}
                       </span>
-                      <div className="flex h-40 w-full items-end justify-center rounded-t-md bg-slate-100">
+                      <div className="flex h-32 w-full items-end justify-center rounded-t-md bg-slate-100 sm:h-40">
                         <div
                           className="w-full max-w-10 rounded-t-md bg-blue-600 transition-all"
                           style={{
@@ -395,21 +767,23 @@ const upcomingBookings = bookings
                           title={`${day.units} unit`}
                         />
                       </div>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-[11px] text-slate-500 sm:text-xs">
                         {day.label}
                       </span>
                     </div>
                   ))}
                 </div>
 
-                <p className="mt-4 text-xs text-slate-400">
+                <p className="mt-4 text-xs leading-5 text-slate-400">
                   Angka dihitung dari booking berstatus Selesai dan tanggal
                   service pada minggu berjalan.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 className="text-lg font-bold">Ringkasan booking</h3>
+              <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <h3 className="text-base font-bold sm:text-lg">
+                  Ringkasan booking
+                </h3>
                 <p className="mt-1 text-sm text-slate-500">
                   Booking dengan tanggal minggu ini.
                 </p>
@@ -445,37 +819,45 @@ const upcomingBookings = bookings
               </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex flex-wrap items-end justify-between gap-3">
+            <section
+              id="kelola-booking"
+              className="scroll-mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+            >
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h3 className="text-lg font-bold">Jadwal service</h3>
                   <p className="mt-1 text-sm text-slate-500">
                     Jadwal mendatang yang belum selesai atau dibatalkan.
                   </p>
                 </div>
-                <label className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="font-medium text-slate-600">
-                    Filter tanggal:
-                  </span>
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label
+                    htmlFor="filterTanggal"
+                    className="text-sm font-medium text-slate-600"
+                  >
+                    Filter tanggal
+                  </label>
                   <input
+                    id="filterTanggal"
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900"
+                    className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 sm:w-auto"
                   />
                   {selectedDate && (
                     <button
                       onClick={() => setSelectedDate("")}
-                      className="rounded-lg border border-slate-300 px-3 py-2 hover:bg-slate-50"
+                      className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 hover:bg-slate-50"
                     >
                       Reset
                     </button>
                   )}
-                </label>
+                </div>
               </div>
 
               {upcomingBookings.length === 0 ? (
-                <p className="mt-6 rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">
+                <p className="mt-5 rounded-xl bg-slate-50 p-5 text-center text-sm text-slate-500 sm:p-6">
                   Belum ada jadwal service mendatang.
                 </p>
               ) : (
@@ -494,14 +876,14 @@ const upcomingBookings = bookings
               )}
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex flex-wrap items-end justify-between gap-3">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h3 className="text-lg font-bold">
                     Riwayat service 7 hari terakhir
                   </h3>
                   <p className="mt-1 text-sm text-slate-500">
-                    {rupiahDateRange}. Hanya booking berstatus Selesai.
+                    {dateRange}. Hanya booking berstatus Selesai.
                   </p>
                 </div>
                 <div className="rounded-xl bg-emerald-50 px-4 py-3">
@@ -515,13 +897,13 @@ const upcomingBookings = bookings
               </div>
 
               {recentHistory.length === 0 ? (
-                <p className="mt-5 rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">
+                <p className="mt-5 rounded-xl bg-slate-50 p-5 text-center text-sm text-slate-500 sm:p-6">
                   Belum ada service selesai dalam tujuh hari terakhir.
                 </p>
               ) : (
-                <div className="mt-5 overflow-x-auto">
-                  <table className="w-full min-w-[650px] text-left text-sm">
-                    <thead>
+                <div className="mt-5 overflow-x-auto rounded-lg border border-slate-100">
+                  <table className="w-full min-w-[600px] text-left text-sm">
+                    <thead className="bg-slate-50">
                       <tr className="border-b border-slate-200 text-slate-500">
                         <th className="px-3 py-3 font-semibold">Tanggal</th>
                         <th className="px-3 py-3 font-semibold">Layanan</th>
@@ -536,20 +918,20 @@ const upcomingBookings = bookings
                           key={booking.id}
                           className="border-b border-slate-100 last:border-0"
                         >
-                          <td className="px-3 py-4">
+                          <td className="whitespace-nowrap px-3 py-4">
                             {formatDate(booking.tanggal)}
                           </td>
                           <td className="px-3 py-4 font-medium">
                             {booking.layanan}
                           </td>
-                          <td className="px-3 py-4">
+                          <td className="whitespace-nowrap px-3 py-4">
                             {booking.jumlah_unit ?? 0} unit
                           </td>
                           <td className="max-w-xs px-3 py-4 text-slate-600">
                             {booking.alamat || "-"}
                           </td>
                           <td className="px-3 py-4">
-                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                            <span className="whitespace-nowrap rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
                               Selesai
                             </span>
                           </td>
@@ -563,11 +945,52 @@ const upcomingBookings = bookings
           </>
         )}
 
-        <footer className="pb-5 text-center text-xs text-slate-400">
+        <footer className="pb-5 pt-1 text-center text-xs text-slate-400">
           Dashboard Admin AC · Data tersimpan di Supabase
         </footer>
       </div>
     </main>
+  );
+}
+
+function IndicatorCard({
+  title,
+  value,
+  subtitle,
+  color,
+}: {
+  title: string;
+  value: string;
+  subtitle: string;
+  color: "blue" | "slate" | "green";
+}) {
+  const styles = {
+    blue: {
+      border: "border-blue-100",
+      number: "text-blue-700",
+    },
+    slate: {
+      border: "border-slate-200",
+      number: "text-slate-900",
+    },
+    green: {
+      border: "border-emerald-100",
+      number: "text-emerald-700",
+    },
+  };
+
+  return (
+    <div
+      className={`min-w-0 rounded-2xl border ${styles[color].border} bg-white p-4 shadow-sm sm:p-5`}
+    >
+      <p className="text-sm font-medium text-slate-500">{title}</p>
+      <p
+        className={`mt-2 break-words text-3xl font-extrabold ${styles[color].number}`}
+      >
+        {value}
+      </p>
+      <p className="mt-1 text-xs leading-5 text-slate-500">{subtitle}</p>
+    </div>
   );
 }
 
@@ -592,17 +1015,19 @@ function StatCard({
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-medium text-slate-500">{title}</p>
         <span
-          className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg font-bold ${colors[color]}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-bold ${colors[color]}`}
         >
           {icon}
         </span>
       </div>
-      <p className="mt-4 text-2xl font-extrabold">{value}</p>
-      <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
+      <p className="mt-4 break-words text-2xl font-extrabold">{value}</p>
+      <p className="mt-1 break-words text-xs leading-5 text-slate-500">
+        {subtitle}
+      </p>
     </div>
   );
 }
@@ -615,12 +1040,13 @@ function SummaryRow({
   value: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-      <span className="text-sm text-slate-600">{label}</span>
-      <span className="font-bold text-slate-900">{value}</span>
+    <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+      <span className="min-w-0 text-sm text-slate-600">{label}</span>
+      <span className="shrink-0 font-bold text-slate-900">{value}</span>
     </div>
   );
 }
+
 
 function BookingRow({
   booking,
@@ -636,45 +1062,73 @@ function BookingRow({
       ? "bg-amber-50 text-amber-800"
       : booking.status === "Diproses"
         ? "bg-blue-50 text-blue-800"
-        : "bg-violet-50 text-violet-800";
+        : booking.status === "Dikonfirmasi"
+          ? "bg-violet-50 text-violet-800"
+          : booking.status === "Selesai"
+            ? "bg-emerald-50 text-emerald-800"
+            : booking.status === "Dibatalkan"
+              ? "bg-red-50 text-red-800"
+              : "bg-slate-100 text-slate-700";
 
   return (
-    <div className="grid gap-4 rounded-xl border border-slate-200 p-4 md:grid-cols-[1fr_auto] md:items-center">
+    <article className="grid min-w-0 gap-4 rounded-xl border border-slate-200 p-3 sm:p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <h4 className="font-bold">{booking.layanan}</h4>
+          <h4 className="break-words font-bold">{booking.layanan}</h4>
           <span
             className={`rounded-full px-3 py-1 text-xs font-bold ${statusColor}`}
           >
             {booking.status}
           </span>
         </div>
+
         <p className="mt-1 text-sm text-slate-500">
           {formatDate(booking.tanggal)} · {booking.jumlah_unit ?? 0} unit AC
         </p>
-        <p className="mt-2 break-words text-sm text-slate-700">
+
+        <div className="mt-3 space-y-2 rounded-lg border border-blue-100 bg-blue-50 p-3">
+          <p className="break-words text-sm text-slate-800">
+            <span className="font-semibold">Nama pelanggan:</span>{" "}
+            {booking.nama || "Nama belum tersedia"}
+          </p>
+
+          <p className="break-words text-sm text-slate-800">
+            <span className="font-semibold">WhatsApp:</span>{" "}
+            {booking.telepon || "Nomor belum tersedia"}
+          </p>
+        </div>
+
+        <p className="mt-3 break-words text-sm text-slate-700">
+          <span className="font-semibold">Alamat:</span>{" "}
           {booking.alamat || "Alamat belum diisi"}
         </p>
+
         {booking.keluhan && (
           <p className="mt-1 break-words text-sm text-slate-500">
-            Keluhan: {booking.keluhan}
+            <span className="font-semibold">Keluhan:</span>{" "}
+            {booking.keluhan}
           </p>
         )}
-        <p className="mt-1 text-xs text-slate-400">
+
+        <p className="mt-2 break-all text-xs text-slate-400">
           ID booking: {booking.id}
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="sr-only" htmlFor={`status-${booking.id}`}>
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+        <label
+          className="text-xs font-medium text-slate-500 md:sr-only"
+          htmlFor={`status-${booking.id}`}
+        >
           Ubah status booking
         </label>
+
         <select
           id={`status-${booking.id}`}
           value={booking.status}
           disabled={saving}
           onChange={(e) => onStatusChange(e.target.value)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 disabled:opacity-50"
+          className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 disabled:opacity-50 sm:w-auto"
         >
           {STATUSES.map((status) => (
             <option key={status} value={status}>
@@ -682,10 +1136,11 @@ function BookingRow({
             </option>
           ))}
         </select>
+
         {saving && (
           <span className="text-xs text-slate-500">Menyimpan...</span>
         )}
       </div>
-    </div>
+    </article>
   );
 }
