@@ -1,4 +1,6 @@
 import Link from "next/link";
+import ProdukCatalog from "./ProdukCatalog";
+
 const services = [
   {
     name: "Cuci AC",
@@ -36,7 +38,7 @@ const steps = [
   },
 ];
 
-const whatsappNumber = "6285945964557"; 
+const whatsappNumber = "6285945964557";
 
 function WhatsAppLink({
   children,
@@ -51,9 +53,9 @@ function WhatsAppLink({
 
   return (
     <a
-      href={`https://wa.me/${85945964557}?text=${message}`}
+      href={`https://wa.me/${whatsappNumber}?text=${message}`}
       target="_blank"
-      rel="noreferrer"
+      rel="noopener noreferrer"
       className={className}
     >
       {children}
@@ -65,54 +67,72 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-white text-slate-800">
       {/* Header */}
-      
-<header className="border-b border-slate-200 bg-white">
-  <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4">
-    <a href="#beranda" className="flex shrink-0 items-center gap-2">
-      <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-700 text-2xl text-white">
-        ❄
-      </span>
-      <span>
-        <span className="block text-lg font-bold text-slate-900">
-          Service AC
-        </span>
-        <span className="block text-xs text-slate-500">
-          Layanan panggilan
-        </span>
-      </span>
-    </a>
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4">
+          <a href="#beranda" className="flex shrink-0 items-center gap-2">
+            <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-700 text-2xl text-white">
+              ❄
+            </span>
+            <span>
+              <span className="block text-lg font-bold text-slate-900">
+                Service AC
+              </span>
+              <span className="block text-xs text-slate-500">
+                Layanan panggilan
+              </span>
+            </span>
+          </a>
 
-    <nav className="hidden items-center gap-7 text-sm font-medium md:flex">
-      <a href="#beranda" className="hover:text-blue-700">Beranda</a>
-      <a href="#layanan" className="hover:text-blue-700">Layanan</a>
-      <a href="#harga" className="hover:text-blue-700">Daftar Harga</a>
-      <a href="#produk" className="hover:text-blue-700">Produk AC</a>
-      <a href="#kontak" className="hover:text-blue-700">Kontak</a>
-    </nav>
+          <nav className="hidden items-center gap-7 text-sm font-medium md:flex">
+            <a href="#beranda" className="hover:text-blue-700">
+              Beranda
+            </a>
+            <a href="#layanan" className="hover:text-blue-700">
+              Layanan
+            </a>
+            <a href="#harga" className="hover:text-blue-700">
+              Daftar Harga
+            </a>
+            <a href="#produk" className="hover:text-blue-700">
+              Produk AC
+            </a>
+            <a href="#kontak" className="hover:text-blue-700">
+              Kontak
+            </a>
+          </nav>
 
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      <Link
-        href="/login"
-        className="rounded-lg border border-blue-700 px-3 py-3 text-sm font-bold text-blue-700 hover:bg-blue-50"
-      >
-        Login
-      </Link>
-      <Link
-        href="/register"
-        className="rounded-lg bg-blue-100 px-3 py-3 text-sm font-bold text-blue-800 hover:bg-blue-200"
-      >
-        Daftar
-      </Link>
-      <Link
-  href="/login?next=/booking"
-  className="rounded-lg bg-blue-700 px-4 py-3 text-sm font-bold text-white hover:bg-blue-800"
->
-  Booking Servis
-</Link>
-    </div>
-  </div>
-</header>
+          {/* Tombol akun dan booking */}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Link
+              href="/login"
+              className="rounded-lg border border-blue-700 px-3 py-3 text-sm font-bold text-blue-700 hover:bg-blue-50"
+            >
+              Login
+            </Link>
 
+            <Link
+              href="/register"
+              className="rounded-lg bg-blue-100 px-3 py-3 text-sm font-bold text-blue-800 hover:bg-blue-200"
+            >
+              Daftar
+            </Link>
+
+            <Link
+              href="/profile"
+              className="rounded-lg border border-slate-300 px-3 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+            >
+              Profile
+            </Link>
+
+            <Link
+              href="/login?next=/booking"
+              className="rounded-lg bg-blue-700 px-4 py-3 text-sm font-bold text-white hover:bg-blue-800"
+            >
+              Booking Servis
+            </Link>
+          </div>
+        </div>
+      </header>
 
       {/* Hero */}
       <section id="beranda" className="bg-slate-50">
@@ -132,12 +152,12 @@ export default function Home() {
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <a
-                href="/booking"
+              <Link
+                href="/login?next=/booking"
                 className="rounded-lg bg-blue-700 px-6 py-4 text-center font-bold text-white hover:bg-blue-800"
               >
                 Booking Servis Sekarang →
-              </a>
+              </Link>
 
               <WhatsAppLink className="rounded-lg border-2 border-green-600 bg-white px-6 py-4 text-center font-bold text-green-700 hover:bg-green-50">
                 Hubungi WhatsApp
@@ -160,7 +180,10 @@ export default function Home() {
       </section>
 
       {/* Services */}
-      <section id="layanan" className="mx-auto max-w-6xl px-5 py-16 md:py-20">
+      <section
+        id="layanan"
+        className="mx-auto max-w-6xl px-5 py-16 md:py-20"
+      >
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-slate-950">Layanan Kami</h2>
           <p className="mt-3 text-lg text-slate-600">
@@ -177,18 +200,21 @@ export default function Home() {
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-blue-50 text-3xl">
                 {service.icon}
               </div>
+
               <h3 className="text-xl font-bold text-slate-900">
                 {service.name}
               </h3>
+
               <p className="mt-3 min-h-14 leading-6 text-slate-600">
                 {service.description}
               </p>
-              <a
-                href="/booking"
+
+              <Link
+                href="/login?next=/booking"
                 className="mt-5 inline-block font-bold text-blue-700 hover:underline"
               >
                 Pilih Layanan →
-              </a>
+              </Link>
             </article>
           ))}
         </div>
@@ -212,6 +238,7 @@ export default function Home() {
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-700 text-xl font-bold text-white">
                   {step.number}
                 </div>
+
                 <div>
                   <h3 className="text-xl font-bold text-slate-900">
                     {step.title}
@@ -225,19 +252,25 @@ export default function Home() {
           </div>
 
           <div className="mt-10 text-center">
-            <a
-              href="/booking"
+            <Link
+              href="/login?next=/booking"
               className="inline-block rounded-lg bg-blue-700 px-7 py-4 font-bold text-white hover:bg-blue-800"
             >
               Mulai Booking
-            </a>
+            </Link>
           </div>
         </div>
       </section>
 
       {/* Price */}
-      <section id="harga" className="mx-auto max-w-6xl px-5 py-16 md:py-20">
-        <h2 className="text-3xl font-bold text-slate-950">Informasi Harga</h2>
+      <section
+        id="harga"
+        className="mx-auto max-w-6xl px-5 py-16 md:py-20"
+      >
+        <h2 className="text-3xl font-bold text-slate-950">
+          Informasi Harga
+        </h2>
+
         <p className="mt-3 text-lg leading-7 text-slate-600">
           Hubungi kami untuk mengetahui harga layanan sesuai jenis dan kondisi
           unit Anda.
@@ -251,6 +284,7 @@ export default function Home() {
                 Harga dikonfirmasi sebelum pengerjaan.
               </p>
             </div>
+
             <WhatsAppLink className="inline-block rounded-lg bg-green-600 px-5 py-3 text-center font-bold text-white hover:bg-green-700">
               Tanya Harga
             </WhatsAppLink>
@@ -259,39 +293,54 @@ export default function Home() {
       </section>
 
       {/* Products */}
-      <section id="produk" className="bg-slate-50 py-16 md:py-20">
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-5 px-5 md:flex-row md:items-center">
-          <div>
-            <h2 className="text-3xl font-bold text-slate-950">
-              Mencari AC Baru?
-            </h2>
-            <p className="mt-3 max-w-xl leading-7 text-slate-600">
-              Tanyakan pilihan unit AC dan informasi harga melalui WhatsApp.
-            </p>
-          </div>
-          <WhatsAppLink className="rounded-lg bg-green-600 px-6 py-4 text-center font-bold text-white hover:bg-green-700">
-            Tanya Produk AC
-          </WhatsAppLink>
-        </div>
-      </section>
+      
+{/* Products */}
+<section id="produk" className="bg-slate-50 py-16 md:py-20">
+  <div className="mx-auto max-w-6xl px-5">
+    <div className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-center">
+      <div>
+        <h2 className="text-3xl font-bold text-slate-950">
+          Pilihan Produk AC
+        </h2>
+        <p className="mt-3 max-w-xl leading-7 text-slate-600">
+          Lihat pilihan AC yang tersedia. Hubungi kami untuk informasi
+          lebih lanjut dan pemesanan.
+        </p>
+      </div>
+
+      <WhatsAppLink className="rounded-lg bg-green-600 px-6 py-4 text-center font-bold text-white hover:bg-green-700">
+        Tanya Produk AC
+      </WhatsAppLink>
+    </div>
+
+    <ProdukCatalog />
+  </div>
+</section>
+
 
       {/* Contact */}
-      <section id="kontak" className="mx-auto max-w-6xl px-5 py-16 md:py-20">
+      <section
+        id="kontak"
+        className="mx-auto max-w-6xl px-5 py-16 md:py-20"
+      >
         <div className="rounded-2xl bg-blue-800 px-6 py-10 text-white md:px-12 md:py-14">
           <h2 className="text-3xl font-bold">
             Butuh Bantuan dengan AC Anda?
           </h2>
+
           <p className="mt-4 max-w-2xl leading-7 text-blue-100">
             Hubungi kami untuk bertanya tentang layanan atau buat booking
             servis sesuai jadwal yang tersedia.
           </p>
+
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <a
-              href="/booking"
+            <Link
+              href="/login?next=/booking"
               className="rounded-lg bg-white px-6 py-4 text-center font-bold text-blue-800 hover:bg-blue-50"
             >
               Booking Servis
-            </a>
+            </Link>
+
             <WhatsAppLink className="rounded-lg border border-white px-6 py-4 text-center font-bold text-white hover:bg-blue-700">
               Chat WhatsApp
             </WhatsAppLink>

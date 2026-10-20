@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -23,7 +22,7 @@ export default function LoginPage() {
     try {
       const supabase = createClient();
 
-      const { error: loginError } =
+      const { data: loginData, error: loginError } =
         await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
@@ -38,13 +37,46 @@ export default function LoginPage() {
         return;
       }
 
-      const next = searchParams.get("next");
-        const destination = next === "/booking" ? "/booking" : "/";
+      const user = loginData.user;
 
-    router.replace(destination);
-    router.refresh();
+      if (!user) {
+        setError("Data akun tidak ditemukan. Silakan coba login kembali.");
+        return;
+      }
+
+      const { data: admin, error: adminError } = await supabase
+        .from("admin_users")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (adminError) {
+        await supabase.auth.signOut();
+        setError(
+          "Gagal memeriksa akses akun admin. Periksa tabel admin_users dan pengaturan RLS Supabase."
+        );
+        return;
+      }
+
+      const next = searchParams.get("next");
+
+      if (admin) {
+        if (next === "/admin/produk") {
+          router.replace("/admin/produk");
+        } else {
+          router.replace("/admin");
+        }
+      } else if (next === "/booking") {
+        router.replace("/booking");
+      } else {
+        router.replace("/profile");
+      }
+
+      router.refresh();
     } catch {
-      setError("Terjadi kesalahan. Periksa koneksi dan konfigurasi Supabase.");
+      setError(
+        "Terjadi kesalahan. Periksa koneksi dan konfigurasi Supabase."
+      );
     } finally {
       setLoading(false);
     }
@@ -66,11 +98,11 @@ export default function LoginPage() {
           </div>
 
           <h1 className="text-2xl font-bold text-slate-900">
-            Login Pelanggan
+            Login
           </h1>
 
           <p className="mt-2 text-sm text-slate-600">
-            Masuk untuk melakukan booking servis AC dan melihat pesananmu.
+            Masuk untuk melakukan booking servis AC atau mengelola pesanan.
           </p>
         </div>
 
@@ -90,7 +122,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="nama@email.com"
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
@@ -109,7 +141,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Masukkan password"
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
