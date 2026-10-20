@@ -1,8 +1,9 @@
-
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import BookingForm from "./BookingForm";
+
+export const instant = false;
 
 export default async function BookingPage() {
   const cookieStore = await cookies();

@@ -1,12 +1,11 @@
-
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -61,22 +60,18 @@ export default function LoginPage() {
 
       const next = searchParams.get("next");
 
-      // Hanya izinkan redirect ke halaman internal website.
       const tujuanValid =
         next && next.startsWith("/") && !next.startsWith("//")
           ? next
           : null;
 
       if (admin) {
-        // Admin tetap masuk dashboard atau halaman admin yang dituju.
         if (tujuanValid?.startsWith("/admin")) {
           router.replace(tujuanValid);
         } else {
           router.replace("/admin");
         }
       } else {
-        // User biasa masuk beranda, kecuali ada tujuan khusus
-        // seperti /booking.
         const tujuanUser =
           tujuanValid && !tujuanValid.startsWith("/admin")
             ? tujuanValid
@@ -110,9 +105,7 @@ export default function LoginPage() {
             ❄
           </div>
 
-          <h1 className="text-2xl font-bold text-slate-900">
-            Login
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-900">Login</h1>
 
           <p className="mt-2 text-sm text-slate-600">
             Masuk untuk melakukan booking servis AC atau mengelola pesanan.
@@ -127,7 +120,6 @@ export default function LoginPage() {
             >
               Email
             </label>
-
             <input
               id="email"
               type="email"
@@ -147,7 +139,6 @@ export default function LoginPage() {
             >
               Password
             </label>
-
             <input
               id="password"
               type="password"
@@ -189,5 +180,19 @@ export default function LoginPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+          <p className="text-sm text-slate-600">Memuat halaman login...</p>
+        </main>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

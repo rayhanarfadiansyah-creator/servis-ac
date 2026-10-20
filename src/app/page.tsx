@@ -338,7 +338,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-7 text-sm text-slate-600 sm:px-5 sm:py-8 md:flex-row md:items-center md:justify-between md:gap-3">
           <p className="font-bold text-slate-900">Service AC</p>
           <p>Servis AC dan berbagai elektronik rumah tangga.</p>
-          <p>© {new Date().getFullYear()} Service AC</p>
+          <p>© 2026 Service AC</p>
         </div>
       </footer>
 
