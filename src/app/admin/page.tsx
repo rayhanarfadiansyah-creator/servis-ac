@@ -14,6 +14,7 @@ type Booking = {
   telepon: string;
   layanan: string;
   tanggal: string;
+  jam_servis?: string | null;
   jumlah_unit: number | null;
   alamat: string | null;
   keluhan: string | null;
@@ -96,6 +97,12 @@ export default function AdminPage() {
   const [errorKuota, setErrorKuota] = useState("");
   const [noticeKuota, setNoticeKuota] = useState("");
 
+  const [jadwalServis, setJadwalServis] = useState({ jam_mulai: "09:00", jam_selesai: "18:00", interval_menit: 60, kapasitas_per_rentang: 2, aktif: true });
+  const [loadingJamServis, setLoadingJamServis] = useState(true);
+  const [savingJamServis, setSavingJamServis] = useState(false);
+  const [errorJamServis, setErrorJamServis] = useState("");
+  const [noticeJamServis, setNoticeJamServis] = useState("");
+
   // Waktu baru dibaca setelah komponen terpasang di browser.
   const [now, setNow] = useState<Date | null>(null);
 
@@ -146,7 +153,7 @@ export default function AdminPage() {
       const { data, error: bookingsError } = await supabase
   .from("bookings")
   .select(
-    "id, user_id, nama, telepon, layanan, tanggal, jumlah_unit, alamat, keluhan, status, created_at"
+    "id, user_id, nama, telepon, layanan, tanggal, jam_servis, jumlah_unit, alamat, keluhan, status, created_at"
   )
   .order("tanggal", { ascending: true });
 
@@ -241,10 +248,46 @@ export default function AdminPage() {
     }
   }, [router]);
 
+  const loadJamServis = useCallback(async () => {
+    setLoadingJamServis(true);
+    setErrorJamServis("");
+    try {
+      const supabase = createClient();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        setErrorJamServis("Sesi login admin tidak tersedia.");
+        return;
+      }
+      const { data: admin, error: adminError } = await supabase
+        .from("admin_users").select("user_id").eq("user_id", user.id).maybeSingle();
+      if (adminError || !admin) {
+        setErrorJamServis("Akses admin tidak dapat diverifikasi.");
+        return;
+      }
+      const { data, error } = await supabase.from("pengaturan_jadwal_servis")
+        .select("jam_mulai, jam_selesai, interval_menit, kapasitas_per_rentang, aktif")
+        .eq("id", 1).maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Pengaturan jadwal belum tersedia. Jalankan SQL migrasi jadwal kedatangan terlebih dahulu.");
+      setJadwalServis({
+        jam_mulai: String(data.jam_mulai).slice(0, 5),
+        jam_selesai: String(data.jam_selesai).slice(0, 5),
+        interval_menit: Number(data.interval_menit),
+        kapasitas_per_rentang: Number(data.kapasitas_per_rentang),
+        aktif: Boolean(data.aktif),
+      });
+    } catch (err) {
+      setErrorJamServis(err instanceof Error ? err.message : "Gagal memuat pengaturan jadwal.");
+    } finally {
+      setLoadingJamServis(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadBookings();
     void loadKuota();
-  }, [loadBookings, loadKuota]);
+    void loadJamServis();
+  }, [loadBookings, loadKuota, loadJamServis]);
 
   async function simpanKuota(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -336,6 +379,47 @@ export default function AdminPage() {
       );
     } finally {
       setSavingKuota(false);
+    }
+  }
+
+  async function simpanPengaturanJamServis(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSavingJamServis(true);
+    setErrorJamServis("");
+    setNoticeJamServis("");
+    try {
+      const interval = Number(jadwalServis.interval_menit);
+      const kapasitas = Number(jadwalServis.kapasitas_per_rentang);
+      if (!jadwalServis.jam_mulai || !jadwalServis.jam_selesai || jadwalServis.jam_mulai >= jadwalServis.jam_selesai) {
+        throw new Error("Jam mulai harus lebih awal daripada jam selesai.");
+      }
+      if (!Number.isInteger(interval) || interval < 15 || interval > 240) {
+        throw new Error("Interval harus bilangan bulat 15–240 menit.");
+      }
+      if (!Number.isInteger(kapasitas) || kapasitas < 1 || kapasitas > 100) {
+        throw new Error("Kapasitas harus bilangan bulat 1–100 booking per rentang.");
+      }
+      const supabase = createClient();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) { router.replace("/login?next=/admin"); return; }
+      const { data: admin, error: adminError } = await supabase.from("admin_users").select("user_id").eq("user_id", user.id).maybeSingle();
+      if (adminError || !admin) { router.replace("/"); return; }
+      const { data, error } = await supabase.from("pengaturan_jadwal_servis").update({
+        jam_mulai: `${jadwalServis.jam_mulai}:00`,
+        jam_selesai: `${jadwalServis.jam_selesai}:00`,
+        interval_menit: interval,
+        kapasitas_per_rentang: kapasitas,
+        aktif: jadwalServis.aktif,
+        updated_at: new Date().toISOString(),
+      }).eq("id", 1).select("id").maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Pengaturan tidak tersimpan. Pastikan policy UPDATE admin sudah diterapkan.");
+      setNoticeJamServis("Pengaturan kedatangan berhasil disimpan.");
+      await loadJamServis();
+    } catch (err) {
+      setErrorJamServis(err instanceof Error ? err.message : "Gagal menyimpan pengaturan jadwal.");
+    } finally {
+      setSavingJamServis(false);
     }
   }
 
@@ -509,6 +593,12 @@ export default function AdminPage() {
               Kelola Tanggal Libur
             </Link>
             <a
+              href="#pengaturan-jam-servis"
+              className="flex min-h-11 items-center justify-center rounded-lg border border-violet-300 bg-violet-50 px-2 py-3 text-center font-semibold text-violet-900 hover:bg-violet-100 sm:px-3"
+            >
+              Pengaturan Jam Servis
+            </a>
+            <a
               href="#pengaturan-kuota"
               className="flex min-h-11 items-center justify-center rounded-lg border border-blue-300 bg-blue-50 px-2 py-3 text-center font-semibold text-blue-900 hover:bg-blue-100 sm:px-3"
             >
@@ -544,6 +634,7 @@ export default function AdminPage() {
             onClick={() => {
               void loadBookings();
               void loadKuota();
+              void loadJamServis();
             }}
             disabled={loading || loadingKuota}
             className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
@@ -569,6 +660,48 @@ export default function AdminPage() {
             {notice}
           </div>
         )}
+
+        <section
+          id="pengaturan-jam-servis"
+          className="scroll-mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        >
+          <h3 className="text-base font-bold sm:text-lg">Pengaturan Kedatangan Servis</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-500">Atur jam operasional dan kapasitas pelanggan pada setiap rentang. Ini adalah jadwal kedatangan, bukan estimasi durasi pengerjaan AC.</p>
+          {errorJamServis && <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{errorJamServis}</p>}
+          {noticeJamServis && <p role="status" className="mt-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{noticeJamServis}</p>}
+          {loadingJamServis ? <p className="mt-4 text-sm text-slate-500">Memuat pengaturan kedatangan...</p> : (
+            <form onSubmit={simpanPengaturanJamServis} className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="jamMulaiServis" className="mb-2 block text-sm font-semibold">Mulai operasional</label>
+                  <input id="jamMulaiServis" type="time" required value={jadwalServis.jam_mulai} onChange={(e) => setJadwalServis((v) => ({ ...v, jam_mulai: e.target.value }))} disabled={savingJamServis} className="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                </div>
+                <div>
+                  <label htmlFor="jamSelesaiServis" className="mb-2 block text-sm font-semibold">Selesai operasional</label>
+                  <input id="jamSelesaiServis" type="time" required value={jadwalServis.jam_selesai} onChange={(e) => setJadwalServis((v) => ({ ...v, jam_selesai: e.target.value }))} disabled={savingJamServis} className="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                </div>
+                <div>
+                  <label htmlFor="intervalServis" className="mb-2 block text-sm font-semibold">Panjang rentang (menit)</label>
+                  <select id="intervalServis" value={jadwalServis.interval_menit} onChange={(e) => setJadwalServis((v) => ({ ...v, interval_menit: Number(e.target.value) }))} disabled={savingJamServis} className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
+                    {[15, 30, 45, 60, 90, 120, 180, 240].map((value) => <option key={value} value={value}>{value} menit</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="kapasitasServis" className="mb-2 block text-sm font-semibold">Maksimal pelanggan per rentang</label>
+                  <input id="kapasitasServis" type="number" min={1} max={100} step={1} required value={jadwalServis.kapasitas_per_rentang} onChange={(e) => setJadwalServis((v) => ({ ...v, kapasitas_per_rentang: Number(e.target.value) }))} disabled={savingJamServis} className="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                </div>
+              </div>
+              <label className="flex items-start gap-3 rounded-lg bg-slate-50 p-3 text-sm">
+                <input type="checkbox" checked={jadwalServis.aktif} onChange={(e) => setJadwalServis((v) => ({ ...v, aktif: e.target.checked }))} disabled={savingJamServis} className="mt-1" />
+                <span><strong>Terima booking kedatangan</strong><span className="block text-slate-500">Matikan sementara jika servis tidak menerima booking baru.</span></span>
+              </label>
+              <div className="rounded-lg border border-violet-100 bg-violet-50 p-3 text-sm text-violet-950">
+                Contoh: 09.00–18.00, interval 60 menit, kapasitas 2 berarti tersedia rentang kedatangan pukul 09.00, 10.00, dan seterusnya sampai 17.00; tiap rentang menerima maksimal 2 pelanggan aktif. Jumlah unit AC tidak menambah hitungan kapasitas.
+              </div>
+              <button type="submit" disabled={savingJamServis} className="min-h-11 rounded-lg bg-violet-700 px-5 py-3 font-bold text-white hover:bg-violet-800 disabled:opacity-50">{savingJamServis ? "Menyimpan..." : "Simpan Pengaturan Kedatangan"}</button>
+            </form>
+          )}
+        </section>
 
         <section
           id="pengaturan-kuota"
@@ -1083,7 +1216,10 @@ function BookingRow({
         </div>
 
         <p className="mt-1 text-sm text-slate-500">
-          {formatDate(booking.tanggal)} · {booking.jumlah_unit ?? 0} unit AC
+          {formatDate(booking.tanggal)}{booking.jam_servis ? ` · ${booking.jam_servis.slice(0, 5)}` : " · Jam belum dipilih"} · {booking.jumlah_unit ?? 0} unit AC
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
+          Booking dibuat: {booking.created_at ? new Date(booking.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "-"}
         </p>
 
         <div className="mt-3 space-y-2 rounded-lg border border-blue-100 bg-blue-50 p-3">

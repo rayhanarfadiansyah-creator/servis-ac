@@ -17,6 +17,8 @@ type TanggalPenuh = {
   kuota: number;
 };
 
+type JamServis = { jam: string; jumlah_booking: number; kapasitas: number; tersedia: boolean };
+
 const NAMA_BULAN = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
   "Juli", "Agustus", "September", "Oktober", "November", "Desember",
@@ -43,6 +45,9 @@ export default function BookingPage() {
 
   const [layanan, setLayanan] = useState("Cuci AC");
   const [tanggal, setTanggal] = useState("");
+  const [jamServis, setJamServis] = useState("");
+  const [daftarJam, setDaftarJam] = useState<JamServis[]>([]);
+  const [loadingJam, setLoadingJam] = useState(false);
   const [jumlahUnit, setJumlahUnit] = useState("1");
   const [alamat, setAlamat] = useState("");
   const [keluhan, setKeluhan] = useState("");
@@ -102,9 +107,32 @@ export default function BookingPage() {
     }
   }, []);
 
-  useEffect(() => {
-    void muatJadwal();
-  }, [muatJadwal]);
+  const muatJamServis = useCallback(async (tanggalDipilih: string) => {
+    if (!tanggalDipilih) {
+      setDaftarJam([]);
+      setJamServis("");
+      return;
+    }
+    setLoadingJam(true);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.rpc("daftar_jam_servis_tanggal", { p_tanggal: tanggalDipilih });
+      if (error) throw error;
+      const slots = (data ?? []) as JamServis[];
+      setDaftarJam(slots);
+      setJamServis((old) => slots.some((item) => item.jam.slice(0, 5) === old && item.tersedia) ? old : "");
+    } catch (error) {
+      console.error("Gagal memuat jam servis:", error);
+      setDaftarJam([]);
+      setJamServis("");
+      setErrorLibur("Jam servis belum bisa dimuat. Coba muat ulang halaman.");
+    } finally {
+      setLoadingJam(false);
+    }
+  }, []);
+
+  useEffect(() => { void muatJadwal(); }, [muatJadwal]);
+  useEffect(() => { void muatJamServis(tanggal); }, [tanggal, muatJamServis]);
 
   const hariIni = tanggalLokal(new Date());
 
@@ -176,8 +204,8 @@ export default function BookingPage() {
     const alamatBersih = alamat.trim();
     const jumlah = Number(jumlahUnit);
 
-    if (!namaBersih || !teleponBersih || !alamatBersih || !tanggal) {
-      alert("Mohon lengkapi nama, nomor WhatsApp, tanggal, dan alamat.");
+    if (!namaBersih || !teleponBersih || !alamatBersih || !tanggal || !jamServis) {
+      alert("Mohon lengkapi nama, nomor WhatsApp, tanggal, jam servis, dan alamat.");
       return;
     }
 
@@ -203,6 +231,11 @@ export default function BookingPage() {
       return;
     }
 
+    if (!daftarJam.some((item) => item.jam.slice(0, 5) === jamServis && item.tersedia)) {
+      alert("Pilih jam servis yang masih tersedia.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -212,13 +245,15 @@ export default function BookingPage() {
       const [
         { data: liburTerbaru, error: errorLiburTerbaru },
         { data: penuhTerbaru, error: errorPenuhTerbaru },
+        { data: jamTerbaru, error: errorJamTerbaru },
       ] = await Promise.all([
         supabase.from("tanggal_libur").select("tanggal, keterangan"),
         supabase.rpc("tanggal_booking_penuh"),
+        supabase.rpc("daftar_jam_servis_tanggal", { p_tanggal: tanggal }),
       ]);
 
-      if (errorLiburTerbaru || errorPenuhTerbaru) {
-        console.error(errorLiburTerbaru || errorPenuhTerbaru);
+      if (errorLiburTerbaru || errorPenuhTerbaru || errorJamTerbaru) {
+        console.error(errorLiburTerbaru || errorPenuhTerbaru || errorJamTerbaru);
         alert("Jadwal belum bisa diverifikasi. Coba lagi.");
         return;
       }
@@ -249,6 +284,16 @@ export default function BookingPage() {
         return;
       }
 
+      const slotMasihTersedia = ((jamTerbaru ?? []) as JamServis[]).some(
+        (item) => item.jam.slice(0, 5) === jamServis && item.tersedia
+      );
+      if (!slotMasihTersedia) {
+        setJamServis("");
+        await muatJamServis(tanggal);
+        alert("Jam tersebut baru saja dipesan orang lain. Silakan pilih jam lain.");
+        return;
+      }
+
       const {
         data: { user },
         error: userError,
@@ -260,16 +305,15 @@ export default function BookingPage() {
         return;
       }
 
-      const { error: bookingError } = await supabase.from("bookings").insert({
-        user_id: user.id,
-        nama: namaBersih,
-        telepon: teleponBersih,
-        layanan,
-        tanggal,
-        jumlah_unit: jumlah,
-        alamat: alamatBersih,
-        keluhan: keluhan.trim() || null,
-        status: "Menunggu",
+      const { error: bookingError } = await supabase.rpc("buat_booking_servis", {
+        p_nama: namaBersih,
+        p_telepon: teleponBersih,
+        p_layanan: layanan,
+        p_tanggal: tanggal,
+        p_jam_servis: jamServis,
+        p_jumlah_unit: jumlah,
+        p_alamat: alamatBersih,
+        p_keluhan: keluhan.trim() || null,
       });
 
       if (bookingError) {
@@ -283,6 +327,13 @@ export default function BookingPage() {
           setTanggal("");
           await muatJadwal();
           alert("Maaf, kuota booking tanggal tersebut baru saja penuh. Silakan pilih tanggal lain.");
+          return;
+        }
+
+        if (pesanError.includes("rentang_booking_penuh") || pesanError.includes("kapasitas rentang")) {
+          setJamServis("");
+          await muatJamServis(tanggal);
+          alert("Kapasitas kedatangan pada rentang waktu itu baru saja penuh. Silakan pilih rentang lain.");
           return;
         }
 
@@ -307,7 +358,8 @@ export default function BookingPage() {
         `No. WhatsApp: ${teleponBersih}`,
         `Email akun: ${user.email || "-"}`,
         `Layanan: ${layanan}`,
-        `Tanggal pilihan: ${tanggal}`,
+        `Tanggal servis: ${tanggal}`,
+        `Jam servis: ${jamServis}`,
         `Jumlah unit AC: ${jumlah}`,
         `Alamat: ${alamatBersih}`,
         `Keluhan: ${keluhan.trim() || "Belum diisi"}`,
@@ -466,6 +518,28 @@ export default function BookingPage() {
             </div>
 
             <div>
+              <label htmlFor="jamServis" className="mb-2 block font-semibold">Pilih jam servis</label>
+              {!tanggal ? (
+                <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Pilih tanggal terlebih dahulu untuk melihat jam tersedia.</p>
+              ) : loadingJam ? (
+                <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Memuat ketersediaan jam...</p>
+              ) : daftarJam.length === 0 ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Jadwal kedatangan belum tersedia atau seluruh rentang sudah penuh.</p>
+              ) : (
+                <>
+                  <select id="jamServis" required value={jamServis} onChange={(e) => setJamServis(e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3">
+                    <option value="">Pilih jam</option>
+                    {daftarJam.map((item) => {
+                      const jam = item.jam.slice(0, 5);
+                      return <option key={jam} value={jam} disabled={!item.tersedia}>{jam} — {item.tersedia ? `tersedia (${item.jumlah_booking}/${item.kapasitas} booking)` : `penuh (${item.jumlah_booking}/${item.kapasitas} booking)`}</option>;
+                    })}
+                  </select>
+                  <p className="mt-2 text-sm text-slate-500">Pilih waktu kedatangan. Kapasitas dihitung berdasarkan jumlah pelanggan pada tiap rentang waktu, bukan jumlah unit AC.</p>
+                </>
+              )}
+            </div>
+
+            <div>
               <label htmlFor="jumlahUnit" className="mb-2 block font-semibold">Jumlah unit AC</label>
               <select id="jumlahUnit" value={jumlahUnit} onChange={(e) => setJumlahUnit(e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3">
                 <option value="1">1 unit</option>
@@ -487,7 +561,7 @@ export default function BookingPage() {
               <textarea id="keluhan" maxLength={2000} rows={3} value={keluhan} onChange={(e) => setKeluhan(e.target.value)} className="w-full rounded-lg border border-slate-300 px-4 py-3" placeholder="Contoh: AC kurang dingin atau bocor" />
             </div>
 
-            <button type="submit" disabled={loading || loadingLibur || Boolean(errorLibur) || !tanggal} className="w-full rounded-lg bg-blue-700 px-5 py-4 font-bold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60">
+            <button type="submit" disabled={loading || loadingLibur || loadingJam || Boolean(errorLibur) || !tanggal || !jamServis} className="w-full rounded-lg bg-blue-700 px-5 py-4 font-bold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60">
               {loading ? "Menyimpan Booking..." : loadingLibur ? "Memuat Jadwal..." : "Ajukan Booking via WhatsApp"}
             </button>
 
