@@ -1,18 +1,20 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 
 export default function AuthNav() {
   const router = useRouter();
+  const pathname = usePathname();
+
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // Periksa sesi login
   useEffect(() => {
     const supabase = createClient();
     let aktif = true;
@@ -42,6 +44,33 @@ export default function AuthNav() {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Jika admin membuka homepage saat masih login, arahkan ke dashboard
+  useEffect(() => {
+    if (loading || !user || pathname !== "/") return;
+
+    let aktif = true;
+
+    async function cekAdmin() {
+      const supabase = createClient();
+
+      const { data, error } = await supabase
+        .from("admin_users")
+        .select("user_id")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+
+      if (!aktif || error || !data) return;
+
+      router.replace("/admin");
+    }
+
+    void cekAdmin();
+
+    return () => {
+      aktif = false;
+    };
+  }, [loading, user, pathname, router]);
 
   async function handleLogout() {
     if (loggingOut) return;
