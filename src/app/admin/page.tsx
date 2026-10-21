@@ -592,6 +592,12 @@ export default function AdminPage() {
             >
               Kelola Tanggal Libur
             </Link>
+            <Link
+              href="/admin/laporan"
+              className="flex min-h-11 items-center justify-center rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-3 text-center font-semibold text-emerald-900 hover:bg-emerald-100 sm:px-3"
+            >
+              Laporan Servis
+            </Link>
             <a
               href="#pengaturan-jam-servis"
               className="flex min-h-11 items-center justify-center rounded-lg border border-violet-300 bg-violet-50 px-2 py-3 text-center font-semibold text-violet-900 hover:bg-violet-100 sm:px-3"
