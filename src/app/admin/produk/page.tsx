@@ -18,6 +18,63 @@ type Product = {
   created_at: string;
 };
 
+async function compressProductImage(file: File): Promise<File> {
+  const image = new Image();
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    image.src = objectUrl;
+
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("Foto tidak bisa dibaca."));
+    });
+
+    const maxDimension = 900;
+    const scale = Math.min(
+      1,
+      maxDimension / Math.max(image.naturalWidth, image.naturalHeight)
+    );
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("Browser tidak mendukung kompresi foto.");
+    }
+
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/webp", 0.78);
+    });
+
+    if (!blob) {
+      throw new Error("Gagal mengompres foto.");
+    }
+
+    if (blob.type !== "image/webp") {
+      throw new Error(
+        "Browser tidak mendukung format WebP. Coba gunakan Chrome atau Edge terbaru."
+      );
+    }
+
+    return new File(
+      [blob],
+      `${file.name.replace(/\.[^.]+$/, "")}.webp`,
+      {
+        type: "image/webp",
+        lastModified: Date.now(),
+      }
+    );
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 const initialForm = {
   nama: "",
   merek: "",
@@ -43,21 +100,25 @@ export default function KelolaProdukPage() {
   async function loadProducts() {
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("products")
-      .select(
-        "id, nama, merek, tipe, pk, harga, stok, deskripsi, foto_url, status, created_at"
-      )
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select(
+          "id, nama, merek, tipe, pk, harga, stok, deskripsi, foto_url, status, created_at"
+        )
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      setErrorMessage("Gagal memuat produk: " + error.message);
-    } else {
-      setProducts((data ?? []) as Product[]);
-      setErrorMessage("");
+      if (error) {
+        setErrorMessage("Gagal memuat produk: " + error.message);
+      } else {
+        setProducts((data ?? []) as Product[]);
+        setErrorMessage("");
+      }
+    } catch {
+      setErrorMessage("Terjadi kesalahan saat memuat produk.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -119,25 +180,32 @@ export default function KelolaProdukPage() {
 
       let fotoUrl: string | null = null;
 
-      // Upload foto jika dipilih.
+      // Kompres foto sebelum upload.
       if (foto) {
         if (!foto.type.startsWith("image/")) {
           throw new Error("File harus berupa gambar.");
         }
 
         if (foto.size > 5 * 1024 * 1024) {
-          throw new Error("Ukuran foto maksimal 5 MB.");
+          throw new Error("Ukuran foto asli maksimal 5 MB.");
         }
 
-        const extension =
-          foto.name.split(".").pop()?.toLowerCase() || "jpg";
-        const path = `${user.id}/${crypto.randomUUID()}.${extension}`;
+        const compressedFoto = await compressProductImage(foto);
+
+        if (compressedFoto.size > 2 * 1024 * 1024) {
+          throw new Error(
+            "Foto masih terlalu besar setelah dikompres. Coba pilih foto lain."
+          );
+        }
+
+        const path = `${user.id}/${crypto.randomUUID()}.webp`;
 
         const { error: uploadError } = await supabase.storage
           .from("product-images")
-          .upload(path, foto, {
-            cacheControl: "3600",
+          .upload(path, compressedFoto, {
+            cacheControl: "31536000",
             upsert: false,
+            contentType: "image/webp",
           });
 
         if (uploadError) {
@@ -153,7 +221,7 @@ export default function KelolaProdukPage() {
         fotoUrl = data.publicUrl;
       }
 
-      // Simpan produk.
+      // Simpan data produk.
       const { error: insertError } = await supabase
         .from("products")
         .insert({
@@ -172,6 +240,8 @@ export default function KelolaProdukPage() {
         throw new Error("Simpan produk gagal: " + insertError.message);
       }
 
+      // Produk berhasil disimpan.
+      uploadedPath = null;
       setMessage("Produk berhasil ditambahkan!");
       setForm(initialForm);
       setFoto(null);
@@ -179,7 +249,7 @@ export default function KelolaProdukPage() {
 
       await loadProducts();
     } catch (error) {
-      // Bersihkan foto yang telanjur diunggah jika insert gagal.
+      // Bersihkan foto jika upload berhasil tetapi penyimpanan gagal.
       if (uploadedPath) {
         const { error: cleanupError } = await supabase.storage
           .from("product-images")
@@ -410,14 +480,15 @@ export default function KelolaProdukPage() {
                   className="mt-1 block w-full rounded-lg border p-2 font-normal"
                 />
                 <span className="mt-1 block text-xs text-gray-500">
-                  Format gambar, maksimal 5 MB.
+                  Format gambar, maksimal 5 MB. Foto akan dikompres otomatis.
                 </span>
               </label>
             </div>
 
             {foto && (
               <p className="text-sm text-gray-600">
-                Foto dipilih: {foto.name}
+                Foto dipilih: {foto.name} (
+                {(foto.size / 1024).toFixed(0)} KB)
               </p>
             )}
 
@@ -469,6 +540,10 @@ export default function KelolaProdukPage() {
                           <img
                             src={product.foto_url}
                             alt={product.nama}
+                            width={56}
+                            height={56}
+                            loading="lazy"
+                            decoding="async"
                             className="h-14 w-14 rounded-lg border object-cover"
                           />
                         ) : (

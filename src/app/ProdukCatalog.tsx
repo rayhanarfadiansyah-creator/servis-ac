@@ -17,6 +17,33 @@ type Product = {
   status: string;
 };
 
+function getOptimizedImageUrl(imageUrl: string): string {
+  try {
+    const url = new URL(imageUrl);
+
+    // Optimasi hanya URL gambar publik dari Supabase Storage.
+    const publicStoragePath = "/storage/v1/object/public/";
+
+    if (!url.pathname.includes(publicStoragePath)) {
+      return imageUrl;
+    }
+
+    url.pathname = url.pathname.replace(
+      publicStoragePath,
+      "/storage/v1/render/image/public/"
+    );
+
+    url.searchParams.set("width", "448");
+    url.searchParams.set("height", "448");
+    url.searchParams.set("resize", "contain");
+    url.searchParams.set("quality", "75");
+
+    return url.toString();
+  } catch {
+    return imageUrl;
+  }
+}
+
 export default function ProdukCatalog() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,12 +111,27 @@ export default function ProdukCatalog() {
               {product.foto_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={product.foto_url}
+                  src={getOptimizedImageUrl(product.foto_url)}
                   alt={product.nama}
+                  width={448}
+                  height={448}
+                  loading="lazy"
+                  decoding="async"
+                  onError={(event) => {
+                    const image = event.currentTarget;
+
+                    // Jika URL transformasi gagal, coba gambar asli sekali.
+                    if (image.dataset.fallbackAttempted !== "true") {
+                      image.dataset.fallbackAttempted = "true";
+                      image.src = product.foto_url!;
+                    }
+                  }}
                   className="h-full w-full object-contain"
                 />
               ) : (
-                <span className="text-slate-400">Foto belum tersedia</span>
+                <span className="text-slate-400">
+                  Foto belum tersedia
+                </span>
               )}
             </div>
 
@@ -104,7 +146,9 @@ export default function ProdukCatalog() {
 
               {(product.tipe || product.pk) && (
                 <p className="mt-2 text-sm text-slate-500">
-                  {[product.tipe, product.pk].filter(Boolean).join(" • ")}
+                  {[product.tipe, product.pk]
+                    .filter(Boolean)
+                    .join(" • ")}
                 </p>
               )}
 

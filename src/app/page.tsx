@@ -150,8 +150,12 @@ export default function Home() {
 
           <div className="min-w-0 overflow-hidden rounded-2xl bg-blue-100">
             <img
-              src="/service-ac-hero.jpg"
+              src="/service-ac-hero.webp"
               alt="Teknisi profesional sedang membersihkan AC"
+              width={900}
+              height={600}
+              fetchPriority="high"
+              decoding="async"
               className="h-56 w-full rounded-2xl object-cover sm:h-80 md:h-[420px]"
             />
           </div>
