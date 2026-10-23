@@ -395,14 +395,33 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-7 text-sm text-slate-600 sm:px-5 sm:py-8 md:flex-row md:items-center md:justify-between md:gap-3">
-          <p className="font-bold text-slate-900">Service AC</p>
-          <p>Servis AC dan berbagai elektronik rumah tangga.</p>
-          <p>© 2026 Service AC</p>
-        </div>
-      </footer>
+      
+{/* Footer */}
+<footer className="border-t border-slate-200 bg-white">
+  <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-7 text-sm text-slate-600 sm:px-5 sm:py-8 md:flex-row md:items-center md:justify-between md:gap-3">
+    <div>
+      <p className="font-bold text-slate-900">Service AC</p>
+      <p className="mt-1">
+        Servis AC dan berbagai elektronik rumah tangga.
+      </p>
+    </div>
+
+    <p>© 2026 Service AC. All rights reserved.</p>
+
+    <p className="text-sm">
+      Website by{" "}
+      <a
+        href="https://wa.me/6281385916633?text=Halo%20R%20Studio%20Web%2C%20saya%20tertarik%20membuat%20website."
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-bold text-blue-700 transition hover:text-blue-900 hover:underline"
+      >
+        R Studio Web ↗
+      </a>
+    </p>
+  </div>
+</footer>
+
 
       {/* Floating WhatsApp */}
       <WhatsAppLink className="fixed bottom-4 right-3 z-50 flex min-h-12 items-center justify-center gap-2 rounded-full bg-green-600 px-4 py-3 font-bold text-white shadow-lg transition hover:bg-green-700 sm:bottom-5 sm:right-5 sm:px-5 sm:py-4">
