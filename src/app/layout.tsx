@@ -13,11 +13,34 @@ const geistMono = Geist_Mono({
 });
 
 
+
 export const metadata: Metadata = {
-  title: "BEST Teknik",
+  metadataBase: new URL("https://www.bestteknikbogor.com"),
+
+  title: "BEST Teknik Bogor | Jasa Servis AC",
   description:
-    "BEST Teknik melayani jasa service AC dan perawatan elektronik di Bogor.",
+    "BEST Teknik melayani jasa servis, cuci, dan perawatan AC panggilan di Bogor. Hubungi kami untuk informasi layanan dan booking servis.",
+
+  alternates: {
+    canonical: "/",
+  },
+
+  robots: {
+    index: true,
+    follow: true,
+  },
+
+  openGraph: {
+    title: "BEST Teknik Bogor | Jasa Servis AC",
+    description:
+      "Jasa servis dan perawatan AC panggilan di Bogor oleh BEST Teknik.",
+    url: "https://www.bestteknikbogor.com/",
+    siteName: "BEST Teknik",
+    locale: "id_ID",
+    type: "website",
+  },
 };
+
 
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

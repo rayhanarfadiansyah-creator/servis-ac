@@ -121,14 +121,17 @@ export default function Home() {
               Layanan Servis Panggilan
             </span>
 
+            
             <h1 className="max-w-xl text-3xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-4xl md:text-5xl">
-              Butuh Servis AC di Rumah?
+                Jasa Servis AC Panggilan di Bogor 
             </h1>
 
             <p className="mt-4 max-w-lg text-base leading-7 text-slate-600 sm:mt-5 sm:text-lg sm:leading-8">
-              Layanan cuci dan perbaikan AC serta berbagai elektronik rumah
-              tangga. Pilih layanan dan tentukan jadwal dengan mudah.
+                BEST Teknik melayani jasa cuci, servis, perawatan AC, serta Elektronik lainnya
+                panggilan di wilayah Bogor. Hubungi kami untuk informasi
+                layanan, harga, dan jadwal booking servis.
             </p>
+
 
             <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row">
               <Link
@@ -406,7 +409,7 @@ export default function Home() {
       </p>
     </div>
 
-    <p>© 2026 BEST Teknk. All rights reserved.</p>
+    <p>© 2026 BEST Teknik. All rights reserved.</p>
 
     <p className="text-sm">
       Website by{" "}
