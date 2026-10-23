@@ -81,7 +81,7 @@ export default function Home() {
 
             <span className="min-w-0">
               <span className="block text-base font-bold text-slate-900 sm:text-lg">
-                Service AC
+                Best Teknik
               </span>
               <span className="block text-xs text-slate-500">
                 Layanan panggilan
@@ -400,13 +400,13 @@ export default function Home() {
 <footer className="border-t border-slate-200 bg-white">
   <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-7 text-sm text-slate-600 sm:px-5 sm:py-8 md:flex-row md:items-center md:justify-between md:gap-3">
     <div>
-      <p className="font-bold text-slate-900">Service AC</p>
+      <p className="font-bold text-slate-900">Best Teknik</p>
       <p className="mt-1">
         Servis AC dan berbagai elektronik rumah tangga.
       </p>
     </div>
 
-    <p>© 2026 Service AC. All rights reserved.</p>
+    <p>© 2026 Best Teknk. All rights reserved.</p>
 
     <p className="text-sm">
       Website by{" "}
