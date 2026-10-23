@@ -162,6 +162,64 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Area Layanan Bogor */}
+      <section
+        aria-labelledby="area-layanan"
+        className="mx-auto max-w-6xl px-4 pt-8 sm:px-5 sm:pt-10"
+      >
+        <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50">
+          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-7">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="30"
+                height="30"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+                <circle cx="12" cy="10" r="2.5" />
+              </svg>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 sm:text-sm">
+                Area Layanan Kami
+              </p>
+              <h2
+                id="area-layanan"
+                className="mt-1 text-xl font-extrabold text-slate-900 sm:text-2xl"
+              >
+                Servis AC Bogor dan Sekitarnya
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
+                Melayani jasa servis, cuci, dan perawatan AC panggilan di
+                wilayah Bogor, Jawa Barat dan sekitarnya.
+              </p>
+              <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm">
+                Lokasi di luar area layanan? Silakan hubungi admin untuk
+                memastikan jangkauan layanan.
+              </p>
+            </div>
+
+            <a
+  href="https://maps.app.goo.gl/CaLBccRZfg6RQoQr7"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-800"
+>
+  <span>📍 Buka Google Maps</span>
+  <span aria-hidden="true">↗</span>
+</a>
+          </div>
+        </div>
+      </section>
+
       {/* Services */}
       <section
         id="layanan"
